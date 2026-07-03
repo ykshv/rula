@@ -1,0 +1,18 @@
+port: 46280
+bind_addresses:
+  - "0.0.0.0"
+rtc:
+  tcp_port: 46281
+  port_range_start: 46282
+  port_range_end: 46282
+  # Local Windows + Docker Desktop has two valid RTC paths:
+  # - browser on Windows reaches the published ports through 127.0.0.1;
+  # - agent container reaches LiveKit through the Compose network.
+  # Advertise both instead of forcing every peer through loopback.
+  enable_loopback_candidate: true
+  advertise_internal_ip: true
+  use_external_ip: false
+keys:
+  devkey: devsecret_change_me_local_only_32chars
+logging:
+  level: info

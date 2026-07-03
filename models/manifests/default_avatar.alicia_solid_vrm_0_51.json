@@ -1,0 +1,25 @@
+{
+  "asset_id": "alicia_solid_vrm_0_51",
+  "kind": "vrm",
+  "role": "default_female_avatar",
+  "display_name": "Alicia Solid",
+  "source": {
+    "repository": "vrm-c/UniVRM",
+    "html_url": "https://github.com/vrm-c/UniVRM/blob/master/Tests/Models/Alicia_vrm-0.51/AliciaSolid_vrm-0.51.vrm",
+    "download_url": "https://raw.githubusercontent.com/vrm-c/UniVRM/master/Tests/Models/Alicia_vrm-0.51/AliciaSolid_vrm-0.51.vrm",
+    "source_git_sha": "a5aac1fb97e6a2b8b633aab38bd0193e402f9fdf",
+    "license": "MIT",
+    "license_url": "https://raw.githubusercontent.com/vrm-c/UniVRM/master/LICENSE.txt"
+  },
+  "artifact": {
+    "web_public_path": "apps/web/public/assets/avatars/default-female/AliciaSolid_vrm-0.51.vrm",
+    "browser_url": "/assets/avatars/default-female/AliciaSolid_vrm-0.51.vrm",
+    "size_bytes": 7878712,
+    "sha256": "237bb02efadf8c13a114af91dd8e860173081457dee87017e51011c448d05dc2"
+  },
+  "usage": {
+    "commercial_closed_loop_default": "allowed_by_repo_license_pending_release_legal_gate",
+    "redistribution": "include_mit_notice",
+    "replaceable": true
+  }
+}

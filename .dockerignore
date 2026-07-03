@@ -1,0 +1,10 @@
+.git
+models/hf
+runtime
+node_modules
+**/node_modules
+**/__pycache__
+**/dist
+**/.cache
+.env.local
+evals/results
