@@ -1,0 +1,178 @@
+profile_id: rtx5090
+host:
+  os: windows
+  runtime: wsl2
+  gpu:
+    vendor: nvidia
+    model: rtx-5090
+    vram_gb: 32
+    cuda_min: "12.8"
+  ram_gb_min: 64
+  ram_gb_recommended: 128
+
+containers:
+  agent_base_image: nvcr.io/nvidia/pytorch:26.01-py3
+  vllm_image: vllm/vllm-openai:latest
+  livekit_image: livekit/livekit-server:latest
+
+runtime:
+  min_free_vram_gb_after_load: 1.5
+
+latency_targets_ms:
+  first_audio_p50_min: 600
+  first_audio_p50_max: 700
+  first_audio_p95_max: 1100
+  first_audio_release_failure: 1500
+  avatar_visible_reaction_max: 250
+  barge_in_p95_max: 300
+  barge_in_target: 200
+  committed_eot_p95_max: 250
+  audio_face_pts_drift_p95_max: 50
+
+quality_gates:
+  russian_asr_wer_max: 0.08
+  eot_false_early_max: 0.02
+  eot_false_late_over_500ms_max: 0.05
+  speculative_hit_rate_min: 0.70
+
+llm:
+  default_hf_id: Qwen/Qwen3-14B-FP8
+  fallback_hf_id: Qwen/Qwen3-14B
+  runtime: vllm
+  enable_thinking: false
+  prefix_caching: true
+  kv_cache_dtype: fp8
+  enforce_eager: true
+  speculative_decoding:
+    enabled: true
+    baseline_method: ngram
+    candidate_methods:
+      - ngram
+      - eagle
+      - mtp
+  max_model_len: 1536
+  # 96 tokens / temp 0.7 / presence penalty: enough head-room for two lively
+  # sentences without templated "чем могу помочь" mode-collapse at 0.45.
+  max_tokens: 96
+  temperature: 0.7
+  presence_penalty: 0.5
+  # Tight single-GPU budget: 0.49 is below the KV-cache floor for Qwen3-14B-FP8
+  # in this vLLM build; 0.50 is the lowest confirmed working value.
+  gpu_memory_utilization: 0.50
+
+stt:
+  model_id: GigaAM-v3-e2e-rnnt
+  mode: in_process
+  streaming_preferred: true
+  buffered_eot_fallback: true
+  capture_word_timestamps: true
+
+tts:
+  model_id: Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice
+  mode: in_process
+  voice:
+    preset: Serena
+    voice_cloning_enabled: false
+    voice_clone_requires_explicit_legal_consent: true
+  first_chunk:
+    token_target: 8
+    deadline_ms: 280
+    punctuation_boundary: true
+  later_chunks:
+    prefer_sentence_boundary: true
+    token_target: 18
+  streaming:
+    # Manually captured torch.cuda.CUDAGraph per decode step (see
+    # voice/streaming_tts.py). This is NOT torch.compile/inductor: shapes are
+    # fully static ([1,1,H] step, [1,2,H] predictor prefill), capture happens
+    # once at startup, nothing recompiles at runtime. Measured on RTX 5090 /
+    # WSL2: first chunk ~160-240 ms, RTF 0.29-0.43. Eager fallback runs at
+    # RTF ~1.8 and cannot hold realtime playback.
+    compile: true
+    chunk_timeout_ms: 2500
+    unit_timeout_ms: 8000
+  playback:
+    # With CUDA-graph synthesis (RTF ~0.3) production outruns playback ~3x,
+    # so a small jitter buffer suffices; the pacer's rebuffer policy turns a
+    # transient stall into one pause instead of chopped words.
+    start_mode: streaming
+    prebuffer_ms: 240
+    rebuffer_ms: 240
+    unit_start_min_ms: 280
+    cached_prebuffer_ms: 220
+    cached_rebuffer_ms: 180
+    cached_unit_start_min_ms: 0
+  speculative_tts:
+    enabled: false
+  cache:
+    enabled: true
+    max_units: 64
+    max_chars: 96
+    persistent: true
+    warmup_direct: true
+    path: /runtime/tts_cache
+  generation:
+    min_new_tokens: 18
+    max_new_tokens: 384
+    chars_per_token: 1.35
+    padding_tokens: 6
+    # Sampling is REQUIRED for this model: greedy decoding degenerates on
+    # anything longer than a short clause — output collapses into
+    # near-silence and runs to max_new_tokens (verified 2026-07-03:
+    # rms 0.008, empty STT round-trip, 30 s of hiss for a 4 s sentence).
+    # The TTS cache stays valid; it simply freezes one sampled rendition.
+    do_sample: true
+    top_k: 50
+    top_p: 1.0
+    temperature: 0.9
+    repetition_penalty: 1.05
+    subtalker_dosample: true
+    subtalker_top_k: 50
+    subtalker_top_p: 1.0
+    subtalker_temperature: 0.9
+  fast_code_predictor:
+    enabled: true
+    experimental: true
+    reason: private qwen-tts code-predictor loop; enable only after latency and voice-quality smoke
+
+turn_detection:
+  reactive:
+    enabled: true
+    vad: silero
+    semantic_detector: livekit_multilingual
+    voiced_on_probability: 0.60
+    voiced_off_probability: 0.50
+    speculative_silence_ms: 128
+    commit_silence_ms: 384
+    punctuated_commit_silence_ms: 256
+    incomplete_commit_silence_ms: 1152
+    punctuated_commit_min_words: 3
+    barge_in_probability: 0.78
+    barge_in_voiced_ms: 288
+    barge_in_min_speaking_ms: 900
+  predictive_vap:
+    enabled: true
+    phase: eval_track
+    shift_probability_threshold: 0.68
+    backchannel_probability_threshold: 0.72
+
+face:
+  primary: nvidia_audio2face_3d
+  default_candidate: nvidia/Audio2Face-3D-v3.0
+  quality_candidate: a2f_3_0_diffusion
+  topology: in_process
+  device: cuda
+  fallback: energy_mouth_debug_only
+
+avatar:
+  default_asset_id: alicia_solid_vrm_0_51
+  kind: vrm
+  role: default_female_avatar
+  manifest: models/manifests/default_avatar.alicia_solid_vrm_0_51.json
+  browser_url: /assets/avatars/default-female/AliciaSolid_vrm-0.51.vrm
+  client_runtime: three_vrm
+
+airgap:
+  require_windows_firewall_check: true
+  require_wsl_container_check: true
+  require_artifact_checksums: true

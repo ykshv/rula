@@ -1,0 +1,15 @@
+{
+  "name": "ru-local-avatar",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/web",
+    "packages/avatar_protocol"
+  ],
+  "scripts": {
+    "web:dev": "npm --workspace apps/web run dev",
+    "web:build": "npm --workspace apps/web run build",
+    "web:test": "npm --workspace apps/web run test",
+    "protocol:test": "npm --workspace packages/avatar_protocol run test"
+  }
+}

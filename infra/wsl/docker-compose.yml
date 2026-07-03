@@ -1,0 +1,131 @@
+services:
+  livekit:
+    image: ${LIVEKIT_IMAGE:-livekit/livekit-server:latest}
+    command: --config /etc/livekit.yaml
+    ports:
+      - "${LOCAL_BIND_ADDRESS:-127.0.0.1}:${LIVEKIT_HOST_PORT:-46280}:46280"
+      - "${LOCAL_BIND_ADDRESS:-127.0.0.1}:${LIVEKIT_RTC_TCP_HOST_PORT:-46281}:46281"
+      - "${LOCAL_BIND_ADDRESS:-127.0.0.1}:${LIVEKIT_RTC_UDP_HOST_PORT:-46282}:46282/udp"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+
+  agent:
+    build:
+      context: ../..
+      dockerfile: apps/agent/Dockerfile
+      args:
+        AGENT_BASE_IMAGE: ${AGENT_BASE_IMAGE:-vllm/vllm-openai:latest}
+    # Host networking (inside the Docker Desktop VM): container-to-container
+    # UDP/DTLS on the compose bridge is unreliable under WSL2 (ICE never
+    # completes, DTLS times out over ICE-TCP, the rust SDK loops on
+    # reconnects). Through the published loopback ports the media path is
+    # stable — verified by repeated E2E probe runs.
+    network_mode: "host"
+    environment:
+      RU_LOCAL_AVATAR_ENV: ${RU_LOCAL_AVATAR_ENV:-development}
+      RU_LOCAL_AVATAR_PROFILE: /app/profiles/rtx5090.yaml
+      RU_LOCAL_AVATAR_HOST: ${AGENT_BIND_HOST:-0.0.0.0}
+      RU_LOCAL_AVATAR_PORT: ${AGENT_INTERNAL_PORT:-46183}
+      RU_LOCAL_AVATAR_STATUS_SCAN_SIZES: "0"
+      RU_LOCAL_AVATAR_CONVERSATION_AUDIT_PATH: /runtime/conversation_audit.sqlite3
+      # Published loopback ports are used because direct container bridge
+      # media can be unreliable under WSL2/Docker Desktop.
+      LIVEKIT_HOST: ${LIVEKIT_STATUS_HOST:-127.0.0.1}
+      LIVEKIT_HOST_PORT: ${LIVEKIT_STATUS_PORT:-46280}
+      LIVEKIT_WS_URL: ${LIVEKIT_WS_URL:-ws://127.0.0.1:46280}
+      LIVEKIT_PUBLIC_WS_URL: ${LIVEKIT_PUBLIC_WS_URL:-ws://127.0.0.1:46280}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-devsecret_change_me_local_only_32chars}
+      VLLM_BASE_URL: http://127.0.0.1:${VLLM_HOST_PORT:-46111}/v1
+    volumes:
+      - ru-local-avatar-runtime:/runtime
+      - ../../profiles:/app/profiles:ro
+      - ../../models/hf:/app/models/hf:ro
+    depends_on:
+      - livekit
+      - vllm
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  vllm:
+    image: ${VLLM_IMAGE:-vllm/vllm-openai:latest}
+    environment:
+      VLLM_WSL2_ENABLE_PIN_MEMORY: ${VLLM_WSL2_ENABLE_PIN_MEMORY:-1}
+      VLLM_USE_DEEP_GEMM: ${VLLM_USE_DEEP_GEMM:-0}
+    command:
+      - --model
+      - ${QWEN_MODEL_PATH:-/models/hf/Qwen__Qwen3-14B-FP8}
+      - --served-model-name
+      - ${QWEN_SERVED_MODEL_NAME:-Qwen/Qwen3-14B-FP8}
+      - --max-model-len
+      - ${VLLM_MAX_MODEL_LEN:-1536}
+      - --enable-prefix-caching
+      - --kv-cache-dtype
+      - ${VLLM_KV_CACHE_DTYPE:-fp8}
+      # CUDA graphs only for tiny batches (single realtime user): eager
+      # decode costs 1.5-2x per token, which lands directly on first-clause
+      # latency. mode 0 skips the inductor compile whose workspace pushed
+      # the KV cache out of the 0.5 budget; graphs alone are cheap.
+      - --compilation-config
+      - '{"mode": 0, "cudagraph_mode": "FULL", "cudagraph_capture_sizes": [1, 2, 4]}'
+      - --gpu-memory-utilization
+      - ${VLLM_GPU_MEMORY_UTILIZATION:-0.50}
+    ports:
+      - "${LOCAL_BIND_ADDRESS:-127.0.0.1}:${VLLM_HOST_PORT:-46111}:8000"
+    volumes:
+      - ../../models/hf:/models/hf:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  web:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+    environment:
+      AGENT_PROXY_PASS: ${WEB_AGENT_PROXY_PASS:-http://agent-proxy:46181}
+    ports:
+      - "${LOCAL_BIND_ADDRESS:-127.0.0.1}:${WEB_HOST_PORT:-46174}:80"
+    depends_on:
+      - agent-proxy
+
+  agent-proxy:
+    image: nginx:alpine
+    environment:
+      AGENT_INTERNAL_PORT: ${AGENT_INTERNAL_PORT:-46183}
+    ports:
+      - "${LOCAL_BIND_ADDRESS:-127.0.0.1}:${AGENT_HOST_PORT:-46181}:46181"
+    volumes:
+      - ./nginx/agent-proxy.conf.template:/etc/nginx/templates/default.conf.template:ro
+    extra_hosts:
+      - "agent-host:${WSL_BRIDGE_GATEWAY:-172.21.0.1}"
+    depends_on:
+      - agent
+
+  prometheus:
+    image: prom/prometheus:v3.7.3
+    ports:
+      - "${LOCAL_BIND_ADDRESS:-127.0.0.1}:${PROMETHEUS_HOST_PORT:-46909}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  grafana:
+    image: grafana/grafana:12.3.1
+    ports:
+      - "${LOCAL_BIND_ADDRESS:-127.0.0.1}:${GRAFANA_HOST_PORT:-46300}:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ru-local-avatar-grafana:/var/lib/grafana
+
+volumes:
+  ru-local-avatar-runtime:
+  ru-local-avatar-grafana:
