@@ -29,7 +29,7 @@ voice = [
   "pyannote-audio==4.0.0",
   "sentencepiece",
   "silero-vad>=5.1.0",
-  "torchcodec==0.7.0",
+  "torchcodec==0.14.0",
   "prometheus-client>=0.20.0",
 ]
 
