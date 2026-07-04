@@ -1,0 +1,50 @@
+name: Bug report
+description: Report a reproducible runtime, API, protocol, or browser issue.
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not paste tokens, private hostnames, local deployment paths, SSH config, model weights, generated media, or conversation logs with personal data.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What broke, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Minimal steps, commands, or request payloads needed to reproduce.
+      placeholder: |
+        1. Start local runtime with ...
+        2. Open ...
+        3. Say / send ...
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: Latency, barge-in, stale generation, audio/face sync, readiness, security, or UX impact.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, GPU, driver/CUDA, WSL/Docker, browser, and commit SHA. Keep it public-safe.
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Public-safe logs
+      description: Paste only redacted logs. No tokens, private paths, hostnames, or personal conversation data.
+      render: text
+    validations:
+      required: false
+

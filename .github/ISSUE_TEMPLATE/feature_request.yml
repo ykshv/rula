@@ -1,0 +1,41 @@
+name: Feature request
+description: Propose a scoped improvement for the local voice-avatar runtime.
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user, operator, or developer problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Describe the smallest useful change.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - realtime voice runtime
+        - avatar / visual layer
+        - browser client
+        - model stack
+        - evals / acceptance
+        - security / privacy
+        - documentation
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and constraints
+      description: Note any latency, GPU, license, air-gap, security, or backward-compatibility impact.
+    validations:
+      required: false
+

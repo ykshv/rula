@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install agent dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e apps/agent prometheus-client
+      - name: Run unit tests
+        run: python -m unittest discover apps/agent/tests
+
+  web:
+    name: TypeScript checks and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci
+      - name: Protocol test
+        run: npm run protocol:test
+      - name: Web typecheck
+        run: npm run web:test
+      - name: Web build
+        run: npm run web:build
+
+  hygiene:
+    name: Public repo hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check README local links
+        run: |
+          python - <<'PY'
+          import re
+          import sys
+          from pathlib import Path
+
+          root = Path.cwd()
+          readme = root / "README.md"
+          text = readme.read_text(encoding="utf-8")
+          targets = []
+          targets += re.findall(r"!\[[^\]]*\]\(([^)]+)\)", text)
+          targets += re.findall(r"(?<!!)\[[^\]]+\]\(([^)]+)\)", text)
+
+          bad = []
+          for raw in targets:
+              target = raw.split("#", 1)[0].strip()
+              if not target or target.startswith(("http://", "https://", "mailto:")):
+                  continue
+              if not (root / target).exists():
+                  bad.append(raw)
+
+          if bad:
+              print("Broken local README links:")
+              for item in bad:
+                  print(f"- {item}")
+              sys.exit(1)
+          PY
+      - name: Scan for public secret/path mistakes
+        run: |
+          if git grep -n -E '(D:\\|C:\\|BEGIN [A-Z ]*KEY|PRIVATE KEY|ssh-rsa|ssh-ed25519|HF_TOKEN=.+)' -- . \
+            ':!*.lock' \
+            ':!.env.local.example' \
+            ':!scripts/secrets/set_hf_token.ps1' \
+            ':!.github/workflows/ci.yml'
+          then
+            echo "Potential secret, local path, or private key marker found."
+            exit 1
+          fi
