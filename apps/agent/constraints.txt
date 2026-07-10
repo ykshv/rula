@@ -1,5 +1,5 @@
 # Keep the CUDA torch stack that ships with the agent base image.
 # These pins stop pip from replacing Blackwell-ready wheels during
 # voice-dependency installation.
-torch==2.11.0+cu130
+torch==2.13.0
 torchaudio==2.11.0+cu130
