@@ -13,7 +13,7 @@
     "@pixiv/three-vrm": "^3.5.4",
     "@ru-local-avatar/avatar-protocol": "file:../../packages/avatar_protocol",
     "@vitejs/plugin-react": "^6.0.3",
-    "livekit-client": "^2.20.0",
+    "livekit-client": "^2.20.1",
     "lucide-react": "^1.23.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
