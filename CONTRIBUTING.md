@@ -30,6 +30,12 @@ cd infra/wsl
 docker compose config --quiet
 ```
 
+## Public Documentation
+
+Public documentation lives in `website/`; ignored `docs/` and local operator notes remain private. The root `pyproject.toml` and `uv.lock` define an independent Python 3.14+ documentation environment; runtime dependencies still belong to `apps/agent/pyproject.toml`.
+
+For documentation changes, run `uv sync --locked`, `uv run python tools/check_docs.py`, `uv run zensical build --strict`, and `uv run python tools/check_publication.py`. The Pages workflow uses the same checks. See [website maintenance](website/development.md) for canonical URLs and search eligibility.
+
 ## Pull Request Expectations
 
 - Explain the user-visible behavior or operational risk being changed.

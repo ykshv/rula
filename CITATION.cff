@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: Please cite this software when using it in your work.
+title: Rula
+type: software
+authors:
+  - family-names: Yakushev
+    given-names: Igor
+    website: https://igor-ya.ru/
+repository-code: https://github.com/ykshv/rula
+url: https://ykshv.github.io/rula/
+license: MIT

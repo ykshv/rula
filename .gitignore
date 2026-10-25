@@ -39,6 +39,7 @@ build/
 *.egg-info/
 
 # Node / frontend
+site/
 node_modules/
 dist/
 .vite/

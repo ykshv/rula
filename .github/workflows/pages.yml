@@ -1,0 +1,44 @@
+name: Documentation
+on:
+  push:
+    branches: [main]
+    paths: ['website/**', 'README.md', 'CONTRIBUTING.md', 'CITATION.cff', 'tools/check*.py', 'mkdocs.yml', 'pyproject.toml', 'uv.lock', '.github/workflows/pages.yml']
+  pull_request:
+    paths: ['website/**', 'README.md', 'CONTRIBUTING.md', 'CITATION.cff', 'tools/check*.py', 'mkdocs.yml', 'pyproject.toml', 'uv.lock', '.github/workflows/pages.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: astral-sh/setup-uv@v10.3.2
+        with:
+          python-version: '3.14'
+      - run: uv sync --locked
+      - run: uv run python tools/check_docs.py
+      - run: uv run zensical build --strict
+      - run: uv run python tools/check_publication.py
+      - uses: actions/upload-pages-artifact@v4
+        if: github.event_name != 'pull_request'
+        with:
+          path: site
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

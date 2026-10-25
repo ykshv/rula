@@ -1,0 +1,29 @@
+site_name: Rula
+site_description: Local-first realtime Russian voice avatar with local STT, Qwen LLM, TTS, Audio2Face, LiveKit and a browser VRM interface.
+site_url: https://ykshv.github.io/rula/
+site_author: Igor Yakushev
+repo_url: https://github.com/ykshv/rula
+repo_name: ykshv/rula
+docs_dir: website
+copyright: 'Created by <a href="https://igor-ya.ru/">Igor Yakushev</a> · MIT'
+theme:
+  name: material
+  custom_dir: website/overrides
+  palette:
+    scheme: slate
+    primary: teal
+    accent: lime
+  features: [navigation.sections, content.code.copy, navigation.top]
+plugins: [search]
+markdown_extensions:
+  - admonition
+  - pymdownx.superfences
+extra:
+  project_languages: [Python, TypeScript]
+nav:
+  - Overview: index.md
+  - Get started: quickstart.md
+  - Architecture: architecture.md
+  - Verification: verification.md
+  - Development: development.md
+  - Русский: ru.md

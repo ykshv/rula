@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block htmltitle %}
+{% if (page.canonical_url == config.site_url) and page.meta is defined and page.meta.title is defined %}
+<title>{{ page.meta.title | e }}</title>
+{% else %}{{ super() }}{% endif %}
+{% endblock %}
+{% block extrahead %}
+{% set description = page.meta.description if page.meta is defined and page.meta.description is defined else config.site_description %}
+{% set title = page.meta.title if page.meta is defined and page.meta.title is defined else page.title %}
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="{{ config.site_name | e }}">
+<meta property="og:title" content="{{ title | e }}{% if not (page.canonical_url == config.site_url) %} · {{ config.site_name | e }}{% endif %}">
+<meta property="og:description" content="{{ description | e }}">
+<meta property="og:url" content="{{ page.canonical_url | e }}">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="{{ title | e }}">
+<meta name="twitter:description" content="{{ description | e }}">
+<link rel="sitemap" type="application/xml" href="{{ config.site_url }}sitemap.xml">
+{% if (page.canonical_url == config.site_url) %}
+<script type="application/ld+json">
+{{ {
+  "@context": "https://schema.org",
+  "@type": "SoftwareSourceCode",
+  "@id": config.site_url ~ "#software",
+  "name": config.site_name,
+  "description": config.site_description,
+  "url": config.site_url,
+  "codeRepository": config.repo_url,
+  "license": config.repo_url ~ "/blob/main/LICENSE",
+  "programmingLanguage": config.extra.project_languages,
+  "author": {
+    "@type": "Person",
+    "@id": "https://igor-ya.ru/#person",
+    "name": "Igor Yakushev",
+    "url": "https://igor-ya.ru/",
+    "sameAs": ["https://github.com/ykshv"]
+  }
+} | tojson | safe }}
+</script>
+{% endif %}
+{% endblock %}
+{% block content %}
+<div lang="{% if page.canonical_url == config.site_url ~ 'ru/' %}ru{% else %}en{% endif %}">
+{{ super() }}
+</div>
+{% endblock %}
